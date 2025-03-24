@@ -161,11 +161,14 @@ export default function Home() {
     })
   }
 
-  // Evaluate the formula
+  
   const evaluateFormula = async () => {
     setIsLoading(true)
-
-    // 构建请求数据
+    setResult(null) 
+  
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000) // set time out to 8 seconds
+  
     const requestData: ModelEvaluationRequest = {
       universe: [...worlds],
       valuation: buildValuation(),
@@ -174,41 +177,51 @@ export default function Home() {
       formula: formula,
       isSupport: entailmentType === "entails",
     }
-
-    // 在控制台打印请求数据
-    console.log("Sending request with data:", requestData)
-
-    // 模拟API请求
+  
     try {
-      const response = await fetch('http://localhost:3001/input', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/input`, {
         method: 'POST',
         mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestData),
-      });
-      const data = await response.json();
-      // console.log(data)
-      const result = data.result;
-      // console.log(result)
-
-      setResult(result);
-      setIsLoading(false)
-     
-    } catch (error) {
-      console.error("Error evaluating formula:", error)
+        signal: controller.signal,
+      })
+  
+      clearTimeout(timeoutId) 
+  
+      if (!response.ok) {
+        throw new Error(`Requst failed:  ${response.status}`)
+      }
+  
+      const data = await response.json()
+  
+      if (!("result" in data)) {
+        throw new Error("Invalid response data")
+      }
+  
+      setResult(data.result)
+    } catch (error: any) {
+      if (error.name === "AbortError") {
+        alert("Request timed out. Please try again later.")
+      } else {
+        console.error("Requst failed: ", error)
+        alert(`Requst failed: ${error.message}`)
+      }
+    } finally {
+      clearTimeout(timeoutId)
       setIsLoading(false)
     }
   }
 
-  // 对世界进行排序（用于显示）
+  // Renk the world
   const sortedWorlds = [...worlds].sort((a, b) => a - b)
 
-  // 对命题进行排序（用于显示）
+  // Rank the propositions
   const sortedPropositions = [...propositions].sort((a, b) => a - b)
 
-  // 对关系进行排序（用于显示）
+  // Rank the relations
   const sortedRelations = [...relations].sort((a, b) => {
     if (a[0] === b[0]) {
       return a[1] - b[1]
