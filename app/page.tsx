@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +13,10 @@ import { MathFormula } from "@/components/math-formula"
 import { BlockMath, InlineMath } from "react-katex";
 import "katex/dist/katex.min.css";
 import { MathJax, MathJaxContext } from "better-react-mathjax";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import Draggable from "react-draggable"
+import { X, HelpCircle } from "lucide-react"
+
 
 // 首先，在顶部导入可视化组件
 import { ModelVisualization } from "@/components/model-visualization"
@@ -48,10 +52,13 @@ export default function Home() {
   // State for formula
   const [formula, setFormula] = useState<string>("")
   const [entailmentType, setEntailmentType] = useState<"entails" | "not-entails">("entails")
+  const [showHelper, setShowHelper] = useState<boolean>(false)
+  const helperRef = useRef<HTMLDivElement>(null)
 
   // State for result
   const [result, setResult] = useState<boolean | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   // 在 useState 部分添加可视化状态
   const [showVisualization, setShowVisualization] = useState<boolean>(false)
@@ -162,12 +169,67 @@ export default function Home() {
   }
 
   
+  // const evaluateFormula = async () => {
+  //   setIsLoading(true)
+  //   setResult(null) 
+  
+  //   const controller = new AbortController()
+  //   const timeoutId = setTimeout(() => controller.abort(), 8000) // set time out to 8 seconds
+  
+  //   const requestData: ModelEvaluationRequest = {
+  //     universe: [...worlds],
+  //     valuation: buildValuation(),
+  //     relation: [...relations],
+  //     state: [...selectedStates],
+  //     formula: formula,
+  //     isSupport: entailmentType === "entails",
+  //   }
+  
+  //   try {
+  //     const response = await fetch(`https://api-bsml.seit.me/input`, {
+  //       method: 'POST',
+  //       mode: 'cors',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify(requestData),
+  //       signal: controller.signal,
+  //     })
+  
+  //     clearTimeout(timeoutId) 
+  
+  //     if (!response.ok) {
+  //       throw new Error(`Requst failed:  ${response.status}`)
+  //     }
+  
+  //     const data = await response.json()
+  
+  //     if (!("result" in data)) {
+  //       throw new Error("Invalid response data")
+  //     }
+  
+  //     setResult(data.result)
+  //   } catch (error: any) {
+  //     if (error.name === "AbortError") {
+  //       alert("Request timed out. Please try again later.")
+  //     } else {
+  //       console.error("Requst failed: ", error)
+  //       alert(`Requst failed: ${error.message}`)
+  //     }
+  //   } finally {
+  //     clearTimeout(timeoutId)
+  //     setIsLoading(false)
+  //   }
+  // }
+
+
   const evaluateFormula = async () => {
     setIsLoading(true)
-    setResult(null) 
+    setResult(null)
+    setErrorMessage(null) // 重置错误
   
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000) // set time out to 8 seconds
+    const timeoutId = setTimeout(() => controller.abort(), 8000)
   
     const requestData: ModelEvaluationRequest = {
       universe: [...worlds],
@@ -189,13 +251,18 @@ export default function Home() {
         signal: controller.signal,
       })
   
-      clearTimeout(timeoutId) 
+      clearTimeout(timeoutId)
   
       if (!response.ok) {
-        throw new Error(`Requst failed:  ${response.status}`)
+        throw new Error(`Request failed: ${response.status}`)
       }
   
       const data = await response.json()
+  
+      if ("error" in data) {
+        setErrorMessage(data.error)
+        return
+      }
   
       if (!("result" in data)) {
         throw new Error("Invalid response data")
@@ -204,10 +271,10 @@ export default function Home() {
       setResult(data.result)
     } catch (error: any) {
       if (error.name === "AbortError") {
-        alert("Request timed out. Please try again later.")
+        setErrorMessage("Request timed out. Please try again later.")
       } else {
-        console.error("Requst failed: ", error)
-        alert(`Requst failed: ${error.message}`)
+        console.error("Request failed: ", error)
+        setErrorMessage(`Request failed: ${error.message}`)
       }
     } finally {
       clearTimeout(timeoutId)
@@ -411,14 +478,23 @@ export default function Home() {
 
         {/* Formula Evaluation Section - 使用LaTeX渲染数学符号 */}
         <Card>
-          <CardHeader>
+          {/* <CardHeader>
             <CardTitle>Formula Evaluation</CardTitle>
+          </CardHeader> */}
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <CardTitle>Formula Evaluation</CardTitle>
+              <HelpCircle
+                className="w-5 h-5 text-muted-foreground cursor-pointer"
+                onClick={() => setShowHelper(true)}
+              />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {/* 符号选择 */}
               <div className="mb-4">
-                <Label className="mb-2 block">Select Entailment Type:</Label>
+                {/* <Label className="mb-2 block">Select Entailment Type:</Label> */}
                 <RadioGroup
                   value={entailmentType}
                   onValueChange={(value) => setEntailmentType(value as "entails" | "not-entails")}
@@ -467,6 +543,14 @@ export default function Home() {
                   </AlertDescription>
                 </Alert>
               )}
+              {errorMessage && (
+                <Alert className="bg-red-50">
+                  <AlertCircle className="text-red-600" />
+                  <AlertDescription className="ml-2">
+                    Error: <span className="font-bold">{errorMessage}</span>
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -504,6 +588,81 @@ export default function Home() {
           </div>
         </CardContent>
       </Card>
+
+
+      {showHelper && (
+        <Draggable  nodeRef={helperRef}>
+          <div
+            ref={helperRef}
+            className="fixed top-20 left-20 z-50 w-[360px] bg-white border border-gray-300 shadow-lg rounded-md p-2"
+          >
+            <div className="flex justify-between items-center handle cursor-move mb-2 px-2">
+              <h2 className="text-sm font-semibold">Formula Helper</h2>
+              <button onClick={() => setShowHelper(false)}>
+                <X className="w-4 h-4 text-gray-500 hover:text-gray-700" />
+              </button>
+            </div>
+            {/* <img
+              src="/formula-help.png"
+              alt="Formula Input Help"
+              className="w-full h-auto rounded"
+            /> */}
+
+            <MathJaxContext>
+              <MathJax>
+                <div className="text-sm space-y-3 px-2 py-1">
+                  <p className="font-semibold">Syntax Guide</p>
+
+                  <p>
+                    Propositions: <code>p1</code>, <code>p2</code>, etc.
+                  </p>
+
+                  <p>
+                    <InlineMath math="\Diamond \varphi" /> → <code>&lt;&gt;ϕ</code> <br/>
+                    <InlineMath math="\Box \varphi" /> → <code>[]ϕ</code> <br/>
+                    <InlineMath math="\neg \varphi" /> → <code>!ϕ</code> <br/>
+                    <InlineMath math="\varphi \land \psi" /> → <code>ϕ & ψ</code> <br/>
+                    <InlineMath math="\varphi \lor \psi" /> → <code>ϕ | ψ</code><br/>
+                    <InlineMath math="\varphi"/> 
+                    <img
+                      src="/symbols/v-symbol.svg"
+                      alt="\V"
+                      className="inline-block w-5 h-5 border-0 outline-none"
+                      style={{ background: "transparent" }}
+                    />
+                    <InlineMath math="\psi" /> → <code>ϕ / ψ</code><br/>
+                    
+                    
+                  </p>
+
+                  <p>
+                    Constants: <code>bot</code> (<InlineMath math="\bot"/>), <code>ne</code> (noneemptyness)
+                  </p>
+
+                  <p>
+                    Use lowercase only. Use parentheses <code>( ... )</code> for grouping.
+                  </p>
+
+                  <p>
+                    Example: <InlineMath math="\Diamond P1 \land (\neg \Box P2" />
+                    <img
+                      src="/symbols/v-symbol.svg"
+                      alt="\V"
+                      className="inline-block w-5 h-5 border-0 outline-none"
+                      style={{ background: "transparent" }}
+                    />   
+                    <InlineMath math=" P3)"  /> → <code>&lt;&gt;p1 & ([]p2 / p3)</code>
+                  </p>
+                </div>
+              </MathJax>
+            </MathJaxContext>
+
+
+
+           
+          </div>
+        </Draggable>
+      )}
     </main>
   )
 }

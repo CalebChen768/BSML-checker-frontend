@@ -28,7 +28,7 @@ export function ModelVisualization({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // 设置高DPI画布以获得更清晰的渲染
+    // Set up a high-DPI canvas for clearer rendering
     const dpr = window.devicePixelRatio || 1
     const rect = canvas.getBoundingClientRect()
 
@@ -178,7 +178,7 @@ export function ModelVisualization({
     ctx.lineWidth = 1
     ctx.stroke()
     ctx.fillStyle = "#1e293b"
-    ctx.fillText("Selected State", 55, 30)
+    ctx.fillText("World(s) in State", 55, 30)
 
     // 常规世界图例
     ctx.beginPath()
