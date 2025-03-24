@@ -179,7 +179,7 @@ export default function Home() {
     }
   
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/input`, {
+      const response = await fetch(`https://api-bsml.seit.me/input`, {
         method: 'POST',
         mode: 'cors',
         headers: {

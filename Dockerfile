@@ -6,9 +6,6 @@ RUN npm install -g pnpm
 
 COPY . .
 
-ARG NEXT_PUBLIC_API_URL=https://api-bsml.seit.me
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-
 RUN pnpm install
 RUN pnpm build
 
