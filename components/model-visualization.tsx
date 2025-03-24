@@ -39,20 +39,20 @@ export function ModelVisualization({
     canvas.style.width = `${rect.width}px`
     canvas.style.height = `${rect.height}px`
 
-    // 清除画布
+    // Clear the canvas
     ctx.clearRect(0, 0, rect.width, rect.height)
 
-    // 设置画布尺寸
+    // Set canvas dimensions
     const width = rect.width
     const height = rect.height
 
-    // 计算世界在圆上的位置
+    // Calculate the positions of worlds on the circle
     const centerX = width / 2
     const centerY = height / 2
     const radius = Math.min(width, height) / 2 - 80
     const worldPositions: Record<number, { x: number; y: number }> = {}
 
-    // 确保世界按照数值顺序排列
+    // Ensure worlds are sorted in numerical order
     const sortedWorlds = [...worlds].sort((a, b) => a - b)
 
     sortedWorlds.forEach((world, index) => {
@@ -62,11 +62,11 @@ export function ModelVisualization({
       worldPositions[world] = { x, y }
     })
 
-    // 绘制关系（箭头）
+    // Draw relations (arrows)
     ctx.strokeStyle = "#888"
     ctx.lineWidth = 2
 
-    // 确保关系按照from和to的数值顺序排列
+    // Ensure relations are sorted by from and to values
     const sortedRelations = [...relations].sort((a, b) => {
       if (a[0] === b[0]) {
         return a[1] - b[1]
@@ -74,86 +74,152 @@ export function ModelVisualization({
       return a[0] - b[0]
     })
 
+    function drawSelfLoop(ctx: CanvasRenderingContext2D, x: number, y: number, radius = 35) {
+      const loopRadius = 25
+      const controlOffsetX = 50
+      const controlOffsetY = 100
+    
+      const startX = x - 20
+      const startY = y - radius +5
+    
+      const cp1X = x - controlOffsetX
+      const cp1Y = y - controlOffsetY
+      const cp2X = x + controlOffsetX
+      const cp2Y = y - controlOffsetY
+
+      const endX = x + 20
+      const endY = y - radius + 5
+    
+      ctx.beginPath()
+      ctx.moveTo(startX, startY)
+      ctx.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, endX, endY)
+      ctx.strokeStyle = "#888"
+      ctx.lineWidth = 2
+      ctx.stroke()
+    
+      const angle = Math.atan2(endY - cp2Y, endX - cp2X)
+      const arrowSize = 10
+    
+      ctx.beginPath()
+      ctx.moveTo(endX, endY)
+      ctx.lineTo(
+        endX - arrowSize * Math.cos(angle - Math.PI / 6),
+        endY - arrowSize * Math.sin(angle - Math.PI / 6)
+      )
+      ctx.lineTo(
+        endX - arrowSize * Math.cos(angle + Math.PI / 6),
+        endY - arrowSize * Math.sin(angle + Math.PI / 6)
+      )
+      ctx.closePath()
+      ctx.fillStyle = "#888"
+      ctx.fill()
+    }
+
+
+    // Pass 1: Draw lines (excluding arrowheads)
     sortedRelations.forEach(([from, to]) => {
       const fromPos = worldPositions[from]
       const toPos = worldPositions[to]
-
       if (!fromPos || !toPos) return
+      if (from === to) return // Self-loops are handled later
 
-      // 计算方向向量
       const dx = toPos.x - fromPos.x
       const dy = toPos.y - fromPos.y
       const length = Math.sqrt(dx * dx + dy * dy)
-
-      // 归一化方向向量
       const ndx = dx / length
       const ndy = dy / length
-
-      // 计算起点和终点（调整以不与圆重叠）
       const nodeRadius = 35
       const startX = fromPos.x + ndx * nodeRadius
       const startY = fromPos.y + ndy * nodeRadius
       const endX = toPos.x - ndx * nodeRadius
       const endY = toPos.y - ndy * nodeRadius
 
-      // 绘制线
+      // 👉 Only draw the line, not the arrowhead
       ctx.beginPath()
       ctx.moveTo(startX, startY)
       ctx.lineTo(endX, endY)
       ctx.stroke()
+    })
 
-      // 绘制箭头头部
+    // Pass 3: Draw arrowheads (excluding lines)
+    sortedRelations.forEach(([from, to]) => {
+      const fromPos = worldPositions[from]
+      const toPos = worldPositions[to]
+      if (!fromPos || !toPos) return
+
+      if (from === to) {
+        // Self-loops are handled here (your original drawSelfLoop already includes arrowheads)
+        drawSelfLoop(ctx, fromPos.x, fromPos.y, 35)
+        return
+      }
+
+      const dx = toPos.x - fromPos.x
+      const dy = toPos.y - fromPos.y
+      const length = Math.sqrt(dx * dx + dy * dy)
+      const ndx = dx / length
+      const ndy = dy / length
+      const nodeRadius = 35
+      const endX = toPos.x - ndx * nodeRadius
+      const endY = toPos.y - ndy * nodeRadius
       const arrowSize = 10
       const angle = Math.atan2(dy, dx)
+
+      // Draw arrowhead
       ctx.beginPath()
       ctx.moveTo(endX, endY)
-      ctx.lineTo(endX - arrowSize * Math.cos(angle - Math.PI / 6), endY - arrowSize * Math.sin(angle - Math.PI / 6))
-      ctx.lineTo(endX - arrowSize * Math.cos(angle + Math.PI / 6), endY - arrowSize * Math.sin(angle + Math.PI / 6))
+      ctx.lineTo(
+        endX - arrowSize * Math.cos(angle - Math.PI / 6),
+        endY - arrowSize * Math.sin(angle - Math.PI / 6)
+      )
+      ctx.lineTo(
+        endX - arrowSize * Math.cos(angle + Math.PI / 6),
+        endY - arrowSize * Math.sin(angle + Math.PI / 6)
+      )
       ctx.closePath()
       ctx.fillStyle = "#888"
       ctx.fill()
     })
 
-    // 绘制世界（圆圈）
+    // Draw worlds (circles)
     sortedWorlds.forEach((world) => {
       const pos = worldPositions[world]
       if (!pos) return
 
-      // 绘制圆
+      // Draw circle
       ctx.beginPath()
       ctx.arc(pos.x, pos.y, 35, 0, 2 * Math.PI)
 
-      // 根据是否在选定状态中填充
+      // Fill based on whether the world is in the selected state
       if (selectedStates.includes(world)) {
-        ctx.fillStyle = "#a5d8ff" // 选定状态为浅蓝色
+        ctx.fillStyle = "#a5d8ff" // Selected state is light blue
       } else {
-        ctx.fillStyle = "#f1f5f9" // 常规世界为浅灰色
+        ctx.fillStyle = "#f1f5f9" // Regular world is light gray
       }
       ctx.fill()
 
-      // 绘制边框
+      // Draw border
       ctx.strokeStyle = "#1e293b"
       ctx.lineWidth = 2
       ctx.stroke()
 
-      // 绘制世界标签
+      // Draw world label
       ctx.fillStyle = "#1e293b"
       ctx.font = "bold 16px sans-serif"
       ctx.textAlign = "center"
       ctx.textBaseline = "middle"
       ctx.fillText(`W${world}`, pos.x, pos.y)
 
-      // 确保命题按照数值顺序排列
+      // Ensure propositions are sorted in numerical order
       const sortedPropositions = [...propositions].sort((a, b) => a - b)
 
-      // 绘制在此世界中为真的命题
+      // Draw propositions that are true in this world
       const trueProps = sortedPropositions.filter((prop) => truthValues[`${world}-${prop}`])
 
       if (trueProps.length > 0) {
         const propsText = trueProps.map((p) => `P${p}`).join(", ")
         ctx.font = "12px sans-serif"
 
-        // 添加背景以提高可读性
+        // Add background for better readability
         const textWidth = ctx.measureText(propsText).width
         ctx.fillStyle = "rgba(255, 255, 255, 0.7)"
         ctx.fillRect(pos.x - textWidth / 2 - 3, pos.y + 35, textWidth + 6, 20)
@@ -163,13 +229,13 @@ export function ModelVisualization({
       }
     })
 
-    // 绘制图例
+    // Draw legend
     ctx.fillStyle = "#1e293b"
     ctx.font = "14px sans-serif"
     ctx.textAlign = "left"
     ctx.textBaseline = "middle"
 
-    // 选定状态图例
+    // Legend for selected states
     ctx.beginPath()
     ctx.arc(30, 30, 15, 0, 2 * Math.PI)
     ctx.fillStyle = "#a5d8ff"
@@ -180,7 +246,7 @@ export function ModelVisualization({
     ctx.fillStyle = "#1e293b"
     ctx.fillText("World(s) in State", 55, 30)
 
-    // 常规世界图例
+    // Legend for regular worlds
     ctx.beginPath()
     ctx.arc(30, 70, 15, 0, 2 * Math.PI)
     ctx.fillStyle = "#f1f5f9"
@@ -194,4 +260,3 @@ export function ModelVisualization({
 
   return <canvas ref={canvasRef} className={`w-full h-full border rounded-md ${visible ? "block" : "hidden"}`} />
 }
-
