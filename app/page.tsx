@@ -625,9 +625,9 @@ export default function Home() {
                     <InlineMath math="\varphi \lor \psi" /> → <code>ϕ | ψ</code><br/>
                     <InlineMath math="\varphi"/> 
                     <img
-                      src="/symbols/v-symbol.svg"
+                      src="inqv.svg"
                       alt="\V"
-                      className="inline-block w-5 h-5 border-0 outline-none"
+                      className="inline-block w-3 h-3 border-0 ml-1 mr-1 outline-none"
                       style={{ background: "transparent" }}
                     />
                     <InlineMath math="\psi" /> → <code>ϕ / ψ</code><br/>
@@ -636,7 +636,7 @@ export default function Home() {
                   </p>
 
                   <p>
-                    Constants: <code>bot</code> (<InlineMath math="\bot"/>), <code>ne</code> (noneemptyness)
+                    Constants: <code>bot</code> (<InlineMath math="\bot"/>), <code>ne</code> (nonemptyness)
                   </p>
 
                   <p>
@@ -646,12 +646,13 @@ export default function Home() {
                   <p>
                     Example: <InlineMath math="\Diamond P1 \land (\neg \Box P2" />
                     <img
-                      src="/symbols/v-symbol.svg"
+                      src="inqv.svg"
                       alt="\V"
-                      className="inline-block w-5 h-5 border-0 outline-none"
+                      className="inline-block w-3 h-3 border-0 ml-1 mr-1 outline-none"
                       style={{ background: "transparent" }}
-                    />   
-                    <InlineMath math=" P3)"  /> → <code>&lt;&gt;p1 & ([]p2 / p3)</code>
+                    /> 
+                    <InlineMath math=" P3)"  />  <br />
+                    → <code>&lt;&gt;p1 &  (!([]p2) / p3)</code>
                   </p>
                 </div>
               </MathJax>
