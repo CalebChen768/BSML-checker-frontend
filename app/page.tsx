@@ -29,6 +29,7 @@ interface ModelEvaluationRequest {
   state: number[]
   formula: string
   isSupport: boolean
+  isPrag: boolean
 }
 
 export default function Home() {
@@ -54,6 +55,7 @@ export default function Home() {
   const [entailmentType, setEntailmentType] = useState<"entails" | "not-entails">("entails")
   const [showHelper, setShowHelper] = useState<boolean>(false)
   const helperRef = useRef<HTMLDivElement>(null)
+  const [isPrag, setIsPrag] = useState<boolean>(false);
 
   // State for result
   const [result, setResult] = useState<boolean | null>(null)
@@ -238,7 +240,10 @@ export default function Home() {
       state: [...selectedStates],
       formula: formula,
       isSupport: entailmentType === "entails",
+      isPrag: isPrag,
     }
+
+    console.log(requestData)
   
     try {
       const response = await fetch(`https://api-bsml.seit.me/input`, {
@@ -494,33 +499,45 @@ export default function Home() {
             <div className="space-y-4">
               {/* 符号选择 */}
               <div className="mb-4">
-                {/* <Label className="mb-2 block">Select Entailment Type:</Label> */}
-                <RadioGroup
-                  value={entailmentType}
-                  onValueChange={(value) => setEntailmentType(value as "entails" | "not-entails")}
-                  className="flex space-x-4"
-                >
+                <div className="flex justify-between items-center">
+
+                  {/* <Label className="mb-2 block">Select Entailment Type:</Label> */}
+                  <RadioGroup
+                    value={entailmentType}
+                    onValueChange={(value) => setEntailmentType(value as "entails" | "not-entails")}
+                    className="flex space-x-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="entails" id="entails" />
+                      <Label htmlFor="entails" className="flex items-center">
+                      <InlineMath math="M, s \ ⊨\  \varphi" />
+                        {/* <span className="ml-2">(Entails)</span> */}
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="not-entails" id="not-entails" />
+                      <Label htmlFor="not-entails" className="flex items-center">
+                      <InlineMath math="M, s \ ⫤\  \varphi" />
+                        {/* <span className="ml-2">(Not Entails)</span> */}
+                      </Label>
+                    </div>
+                  </RadioGroup>
+
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="entails" id="entails" />
-                    <Label htmlFor="entails" className="flex items-center">
-                    <InlineMath math="M, s \ ⊨\  \varphi" />
-                      {/* <span className="ml-2">(Entails)</span> */}
-                    </Label>
+                    <Checkbox id="pragmatic-enrichment" checked={isPrag} onCheckedChange={() => setIsPrag(!isPrag)} />
+                    <Label htmlFor="pragmatic-enrichment">Pragmatic Enrichment</Label>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="not-entails" id="not-entails" />
-                    <Label htmlFor="not-entails" className="flex items-center">
-                    <InlineMath math="M, s \ ⫤\  \varphi" />
-                      {/* <span className="ml-2">(Not Entails)</span> */}
-                    </Label>
-                  </div>
-                </RadioGroup>
+                </div>
               </div>
+
+
+
 
               {/* 公式输入 */}
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-medium whitespace-nowrap flex items-center">
                   <InlineMath math={`M, s \ ${getEntailmentSymbol()} \ `} />
+                  {isPrag && <InlineMath math="[" />}
                 </span>
                 <Input
                   id="formula"
@@ -529,6 +546,11 @@ export default function Home() {
                   onChange={(e) => setFormula(e.target.value)}
                   className="flex-grow"
                 />
+                {isPrag && (
+                  <span className="text-lg font-medium whitespace-nowrap flex items-center">
+                    <InlineMath math="]^+" />
+                  </span>
+                )}
               </div>
 
               <Button onClick={evaluateFormula} disabled={isLoading || !formula.trim()} className="w-full">
